@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "esnext",
+    "lib": ["dom", "es6", "es2017"],
+    "importHelpers": true,
+    "strict": true,
+    "jsx": "preserve",
+    "moduleResolution": "node",
+    "declaration": true,
+    "sourceMap": false,
+    "outDir": "./lib",
+    "diagnostics": true,
+    "listFiles": true,
+    "pretty": true,
+    "noEmitOnError": false,
+    "strictNullChecks": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "experimentalDecorators": true,
+    "removeComments": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "noImplicitAny": false,
+    "noStrictGenericChecks": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "compileOnSave": true,
+  "include": [
+    "src/**/*.ts",
+    "types/*.d.ts"
+  ],
+  "exclude": []
+}

@@ -1,0 +1,35 @@
+cache:
+  paths:
+    - node_modules/
+
+before_script:
+  - yarn --production=false
+
+stages:
+ - build
+ - test
+
+deployment:
+  variables:
+    NODE_ENV: 'production'
+    DEVTOOL: 'source-map'
+  tags:
+    - development
+  script:
+    - yarn build
+  stage: build
+  only:
+    - branches
+    - triggers
+
+test:
+  variables:
+    NODE_ENV: 'staging'
+  tags:
+    - development
+  script:
+    - yarn test
+  stage: test
+  only:
+    - branches
+    - triggers

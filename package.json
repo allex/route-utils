@@ -1,0 +1,80 @@
+{
+  "name": "route-utils",
+  "version": "1.0.1",
+  "description": "Vue route utilities (based on vue)",
+  "jsnext:main": "lib/route-utils.esm.js",
+  "module": "lib/route-utils.esm.js",
+  "main": "lib/route-utils.js",
+  "types": "lib/index.d.ts",
+  "repository": "allex/route-utils",
+  "keywords": [
+    "traverse",
+    "route-utils"
+  ],
+  "scripts": {
+    "precommit": "yarn lint && yarn test",
+    "lint": "tslint -p tsconfig.json src/{**/,}*.ts",
+    "lint:fix": "tslint -p tsconfig.json src/{**/,}*.ts --fix",
+    "test": "jest --coverage --passWithNoTests",
+    "build": "yarn lint && rb -c",
+    "prepare": "yarn build"
+  },
+  "author": "allex <allex.wxn@gmail.com>",
+  "dependencies": {
+    "@tdio/utils": "next",
+    "path-to-regexp": "^6.1.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.6.2",
+    "@babel/preset-env": "^7.6.2",
+    "@babel/runtime": "^7.6.2",
+    "@commitlint/cli": "^7.2.1",
+    "@tdio/commitlint-conventional": "^1.0.1",
+    "@types/node": "^10.5.4",
+    "babel-core": "bridge",
+    "babel-jest": "^23.6.0",
+    "husky": "^1.1.2",
+    "jest": "^23.6.0",
+    "ts-mockito": "^2.3.0",
+    "ts-node": "^7.0.0",
+    "tslint": "^5"
+  },
+  "license": "MIT",
+  "files": [
+    "lib/",
+    "types"
+  ],
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "lint-staged": {
+    "*.{jsx,ts,tsx,vue}": [
+      "yarn lint --",
+      "git add"
+    ]
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "modulePaths": [
+      "src"
+    ],
+    "testMatch": [
+      "**/?(*-)+(spec|test).?(m)js"
+    ],
+    "roots": [
+      "test"
+    ],
+    "moduleFileExtensions": [
+      "js"
+    ],
+    "moduleDirectories": [
+      "node_modules"
+    ],
+    "transform": {
+      "\\.js$": "babel-jest"
+    }
+  }
+}
