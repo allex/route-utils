@@ -38,7 +38,7 @@ export interface TNodeRef<T = TNode> {
   node: T;
 }
 
-export type IVisitor<T = TNode> = (parent: T | undefined, node: T, path: string) => TReturn | boolean
+export type IVisitor<T = TNode> = (parent: T | undefined, node: T, path: string, level?: number) => TReturn | boolean
 
 export enum TReturn { Skip = -1, Normal = 0, Break = 1 }
 
@@ -62,8 +62,8 @@ const normalizeTReturn = (v: any): TReturn => (!v
 // TReturn.Break - Absolute equal
 // TReturn.Normal - with same prefix
 export const matchPath = (path: string, ref: string): TReturn => {
-  const p1 = path.split('/')
-  const p2 = ref.split('/')
+  const p1 = path.split('/').filter(Boolean)
+  const p2 = ref.split('/').filter(Boolean)
   const l1 = p1.length
   const l2 = p2.length
   const l = l1 > l2 ? l2 : l1
@@ -248,4 +248,26 @@ export const resolveRoutePath = (route: TNode | string, options: ResolveRouteOpt
   }
 
   return path
+}
+
+export const reduceTree = <T extends TNode | TNode[]> (node: T, matcher: IVisitor): T => {
+  const isList = isArray(node)
+  const list = (isList ? node : [node]) as TNode[]
+  const reduce = (parent: TNode | undefined, nodes: TNode[], root: string, level: number): TNode[] => nodes.reduce((arr, node) => {
+    const {
+      children = [],
+      ...item
+    } = node
+    const path = resolveUrl(root, node.path, true)
+    if (matcher(parent, node, path, level)) {
+      if (children.length) {
+        const items = reduce(node, children, path, level + 1)
+        if (items.length) item.children = items
+      }
+      arr.push(item)
+    }
+    return arr
+  }, [] as TNode[])
+  const ret = reduce(undefined, list, '/', 0)
+  return (isList ? ret : ret[0]) as T
 }
