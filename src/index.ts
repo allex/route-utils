@@ -40,7 +40,18 @@ export interface TNodeRef<T = TNode> {
 
 export type IVisitor<T = TNode> = (parent: T | undefined, node: T, path: string, level?: number) => TReturn | boolean
 
-export enum TReturn { Skip = -1, Normal = 0, Break = 1 }
+export enum TReturn {
+  Skip = -1,
+  Normal = 0,
+  Break = 1
+}
+
+export enum EMatch {
+  NE = -1,
+  EQ = 1,
+  LT = 2,
+  GT = 3
+}
 
 export interface ITraverseOption<T> {
   enter?: IVisitor<T>;
@@ -57,11 +68,15 @@ const normalizeTReturn = (v: any): TReturn => (!v
     ? TReturn.Skip
     : TReturn.Break)
 
-// Get path diff by a reference path, returns {TReturn}
-// TReturn.Skip - Whole not matches
-// TReturn.Break - Absolute equal
-// TReturn.Normal - with same prefix
-export const matchPath = (path: string, ref: string): TReturn => {
+/**
+ * Get path diff by a reference path, returns {EMatch}
+ *
+ * EMatch.NE - Whole not matches
+ * EMatch.EQ - Absolute equal
+ * EMatch.LT - target path is less than ref
+ * EMatch.GT - target path is greater than ref
+ */
+export const matchPath = (path: string, ref: string): EMatch => {
   const p1 = path.split('/').filter(Boolean)
   const p2 = ref.split('/').filter(Boolean)
   const l1 = p1.length
@@ -70,11 +85,15 @@ export const matchPath = (path: string, ref: string): TReturn => {
   let i = 0
   while (i < l) {
     if (p1[i] !== p2[i]) {
-      return TReturn.Skip
+      return EMatch.NE
     }
     i++
   }
-  return l1 === l2 ? TReturn.Break : TReturn.Normal
+  return l1 === l2
+    ? EMatch.EQ
+    : l1 < l2
+      ? EMatch.LT
+      : EMatch.GT
 }
 
 /**
@@ -164,7 +183,7 @@ interface MatcherOptions {
 const normalizeMatcher = (matcher: IVisitor | string, { prefix }: MatcherOptions = {}): IVisitor => {
   if (isFunction(matcher)) {
     return prefix
-      ? (parent, node, path) => (matchPath(prefix, path) === TReturn.Skip ? TReturn.Skip : normalizeTReturn((matcher as IVisitor)(parent, node, path)))
+      ? (parent, node, path) => (matchPath(prefix, path) === EMatch.NE ? TReturn.Skip : normalizeTReturn((matcher as IVisitor)(parent, node, path)))
       : (parent, node, path) => normalizeTReturn((matcher as IVisitor)(parent, node, path))
   }
   return (_parent, _node, path) => ((matcher as string).indexOf(path) !== 0
