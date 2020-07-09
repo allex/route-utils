@@ -26,6 +26,7 @@ const plugins = [
   'node-builtins',
   'resolve',
   'typescript',
+  'babel',
   'commonjs',
   'globals'
 ]

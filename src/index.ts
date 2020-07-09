@@ -40,23 +40,25 @@ export interface TNodeRef<T = TNode> {
 
 export type IVisitor<T = TNode> = (parent: T | undefined, node: T, path: string, level?: number) => TReturn | boolean
 
-export enum TReturn {
+export interface ITraverseOption<T> {
+  enter?: IVisitor<T>;
+  leave?: IVisitor<T>;
+}
+
+enum TReturn {
   Skip = -1,
   Normal = 0,
   Break = 1
 }
 
-export enum EMatch {
+enum EMatch {
   NE = -1,
   EQ = 1,
   LT = 2,
   GT = 3
 }
 
-export interface ITraverseOption<T> {
-  enter?: IVisitor<T>;
-  leave?: IVisitor<T>;
-}
+export { TReturn, EMatch }
 
 const defaultVisitor = () => TReturn.Normal
 const isTBreak = (v: any): boolean => v === TReturn.Break || v === null || v === false
