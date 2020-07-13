@@ -40,9 +40,12 @@ export interface TNodeRef<T = TNode> {
 
 export type IVisitor<T = TNode> = (parent: T | undefined, node: T, path: string, level?: number) => TReturn | boolean
 
-export interface ITraverseOption<T> {
-  enter?: IVisitor<T>;
-  leave?: IVisitor<T>;
+export type EnterVisitor = IVisitor<TNode>
+export type LeaveVisitor = IVisitor<TNode>
+
+export interface ITraverseOption {
+  enter?: EnterVisitor;
+  leave?: LeaveVisitor;
 }
 
 enum TReturn {
@@ -102,15 +105,21 @@ export const matchPath = (path: string, ref: string): EMatch => {
  * Helper api for traverse router tree (DFS)
  *
  * @param {TNode|TNode[]} route(s)
- * @param {ITraverseOption} visitor
+ * @param {ITraverseOption|EnterVisitor} visitor
  */
-export const traverse = <T extends TNode> (route: T | T[], visitor: ITraverseOption<TNode>) => {
-  const {
-    enter = defaultVisitor,
-    leave = defaultVisitor
-  } = visitor
+export const traverse = (route: TNode | TNode[], visitor: EnterVisitor | ITraverseOption) => {
+  let enter: EnterVisitor = defaultVisitor
+  let leave: LeaveVisitor = defaultVisitor
 
-  const reduce = <T extends TNode> (parent: T | null, routes: T[], root: string): TReturn => routes.reduce((r: TReturn, route: T) => {
+  if (isFunction(visitor)) {
+    enter = visitor as EnterVisitor
+  } else {
+    const v = visitor as ITraverseOption
+    enter = v.enter || enter
+    leave = v.leave || leave
+  }
+
+  const reduce = (parent: TNode | null, routes: TNode[], root: string): TReturn => routes.reduce((r: TReturn, route: TNode) => {
     if (isTBreak(r)) {
       return r
     }
@@ -136,7 +145,7 @@ export const traverse = <T extends TNode> (route: T | T[], visitor: ITraverseOpt
     route = [route]
   }
 
-  reduce(null, route as T[], '/')
+  reduce(null, route as TNode[], '/')
 }
 
 // Performs a bfs on a node and its children
