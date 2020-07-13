@@ -194,7 +194,7 @@ interface MatcherOptions {
 const normalizeMatcher = (matcher: IVisitor | string, { prefix }: MatcherOptions = {}): IVisitor => {
   if (isFunction(matcher)) {
     return prefix
-      ? (parent, node, path) => (matchPath(prefix, path) === EMatch.NE ? TReturn.Skip : normalizeTReturn((matcher as IVisitor)(parent, node, path)))
+      ? (parent, node, path) => (matchPath(path, prefix) === EMatch.NE ? TReturn.Skip : normalizeTReturn((matcher as IVisitor)(parent, node, path)))
       : (parent, node, path) => normalizeTReturn((matcher as IVisitor)(parent, node, path))
   }
   return (_parent, _node, path) => ((matcher as string).indexOf(path) !== 0
