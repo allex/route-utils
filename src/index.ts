@@ -107,7 +107,7 @@ export const matchPath = (path: string, ref: string): EMatch => {
  * @param {TNode|TNode[]} route(s)
  * @param {ITraverseOption|EnterVisitor} visitor
  */
-export const traverse = (route: TNode | TNode[], visitor: EnterVisitor | ITraverseOption) => {
+export const traverse = (route: TNode | TNode[], visitor: EnterVisitor | ITraverseOption): void => {
   let enter: EnterVisitor = defaultVisitor
   let leave: LeaveVisitor = defaultVisitor
 
@@ -204,6 +204,8 @@ const normalizeMatcher = (matcher: IVisitor | string, { prefix }: MatcherOptions
       : TReturn.Normal)
 }
 
+export type TraversalFn<T> = (routes: T[], fn: IVisitor<T>) => void
+
 /**
  * Find route context by a specific matcher
  *
@@ -217,25 +219,16 @@ export const findNodeRef = <T extends TNode> (routes: T[], matcher: IVisitor | s
   }
   let context: TNodeRef<TNode> | undefined
   const predicate: IVisitor = normalizeMatcher(matcher, options)
-  if (options.bfs) {
-    bfsTraversal(routes, (parent, node, path) => {
-      const r = predicate(parent, node, path)
-      if (isTBreak(r)) {
-        context = { parent, node, path }
-      }
-      return r
-    })
-  } else {
-    traverse(routes, {
-      enter (parent, node, path) {
-        const r = predicate(parent, node, path)
-        if (isTBreak(r)) {
-          context = { parent, node, path }
-        }
-        return r
-      }
-    })
-  }
+  const traverseFn: TraversalFn<TNode> = options.bfs
+    ? bfsTraversal as TraversalFn<TNode>
+    : traverse
+  traverseFn(routes, (parent, node, path) => {
+    const r = predicate(parent, node, path)
+    if (isTBreak(r)) {
+      context = { parent, node, path }
+    }
+    return r
+  })
   return context as TNodeRef<T>
 }
 
