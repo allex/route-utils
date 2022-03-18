@@ -14,7 +14,7 @@ export function fillParams (path: string, params: Kv): string {
     return filler(params, { pretty: true })
   } catch (e) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn(false, `missing param for ${path}: ${e.message}`)
+      console.warn(false, `missing param for ${path}: ${(e instanceof Error ? e.message : e)}`)
     }
     return ''
   } finally {
