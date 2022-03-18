@@ -11,6 +11,8 @@ import {
 
 import { fillParams } from './params'
 
+const resolvePath = (b: string, p: string | undefined, append?: boolean): string => resolveUrl(b, p || '', append)
+
 // Re-export some shortcut APIs
 export {
   fillParams
@@ -125,7 +127,7 @@ export const traverse = (route: TNode | TNode[], visitor: EnterVisitor | ITraver
     }
 
     parent = parent || route
-    const path = resolveUrl(root, route.path, true)
+    const path = resolvePath(root, route.path, true)
     r = enter(parent, route, path) as TReturn
 
     if (!isTBreak(r)) {
@@ -156,7 +158,7 @@ const bfsTraversal = <T extends TNode> (node: T | T[], matcher: IVisitor): T[] =
   }
 
   const createCtx = (root: string, node: TNode, parent?: TNode): TNodeRef =>
-    ({ parent, node, path: resolveUrl(root, node.path, true) })
+    ({ parent, node, path: resolvePath(root, node.path, true) })
 
   const nodes: T[] = []
 
@@ -257,7 +259,7 @@ export const resolveRoutePath = (route: TNode | string, options: ResolveRouteOpt
 
   const rawPath = isString(route) ? (route as string) : (route as TNode).path
 
-  let path = resolveUrl(base, rawPath, !!append)
+  let path = resolvePath(base, rawPath, !!append)
 
   // apply params. eg: /foo/:id, { id: 1 } => /foo/1
   if (!isEmpty(params)) {
@@ -281,9 +283,9 @@ export const reduceTree = <T extends TNode | TNode[]> (node: T, matcher: IVisito
       children = [],
       ...item
     } = node
-    const path = resolveUrl(root, node.path, true)
+    const path = resolvePath(root, node.path, true)
     if (matcher(parent, node, path, level)) {
-      if (children.length) {
+      if (children && children.length) {
         const items = reduce(node, children, path, level + 1)
         if (items.length) item.children = items
       }
