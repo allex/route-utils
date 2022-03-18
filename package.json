@@ -1,6 +1,6 @@
 {
   "name": "route-utils",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Vue route utilities (based on vue)",
   "jsnext:main": "lib/route-utils.esm.js",
   "module": "lib/route-utils.esm.js",
