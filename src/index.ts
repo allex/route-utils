@@ -28,19 +28,20 @@ const param = (o: Kv): string => {
   }, '')
 }
 
-export interface TNode {
+export interface TNode<TKey extends string | number = string> {
   [key: string]: any;
-  path: string;
-  children?: TNode[];
+  path?: string;
+  children?: Array<TNode<TKey>>
 }
 
-export interface TNodeRef<T = TNode> {
+export interface TNodeRef<T extends TNode = TNode> {
   parent?: T;
   path: string;
   node: T;
 }
 
-export type IVisitor<T = TNode> = (parent: T | undefined, node: T, path: string, level?: number) => TReturn | boolean
+export type IVisitor<T extends TNode = TNode> = (parent: T | undefined, node: T, path: string, level?: number) => TReturn | boolean
+export type IVisitorWithLevel<T extends TNode = TNode> = (parent: T | undefined, node: T, path: string, level: number) => TReturn | boolean
 
 export type EnterVisitor = IVisitor<TNode>
 export type LeaveVisitor = IVisitor<TNode>
@@ -109,7 +110,7 @@ export const matchPath = (path: string, ref: string): EMatch => {
  * @param {TNode|TNode[]} route(s)
  * @param {ITraverseOption|EnterVisitor} visitor
  */
-export const traverse = (route: TNode | TNode[], visitor: EnterVisitor | ITraverseOption): void => {
+export const traverse = <T extends TNode>(route: T | T [], visitor: EnterVisitor | ITraverseOption): void => {
   let enter: EnterVisitor = defaultVisitor
   let leave: LeaveVisitor = defaultVisitor
 
@@ -121,7 +122,7 @@ export const traverse = (route: TNode | TNode[], visitor: EnterVisitor | ITraver
     leave = v.leave || leave
   }
 
-  const reduce = (parent: TNode | null, routes: TNode[], root: string): TReturn => routes.reduce((r: TReturn, route: TNode) => {
+  const reduce = (parent: T | null, routes: T[], root: string): TReturn => routes.reduce<TReturn>((r, route) => {
     if (isTBreak(r)) {
       return r
     }
@@ -131,9 +132,9 @@ export const traverse = (route: TNode | TNode[], visitor: EnterVisitor | ITraver
     r = enter(parent, route, path) as TReturn
 
     if (!isTBreak(r)) {
-      const children = route.children
+      const children = route.children as T[]
       if (children && children.length && r !== TReturn.Skip) {
-        r = reduce(route, children!, path)
+        r = reduce(route, children, path)
       }
       if (isTBreak(r) || isTBreak(leave(parent, route, path))) {
         r = TReturn.Break
@@ -141,13 +142,13 @@ export const traverse = (route: TNode | TNode[], visitor: EnterVisitor | ITraver
     }
 
     return r
-  }, TReturn.Normal as TReturn)
+  }, TReturn.Normal)
 
   if (!isArray(route)) {
     route = [route]
   }
 
-  reduce(null, route as TNode[], '/')
+  reduce(null, route as T[], '/')
 }
 
 // Performs a bfs on a node and its children
@@ -206,7 +207,7 @@ const normalizeMatcher = (matcher: IVisitor | string, { prefix }: MatcherOptions
       : TReturn.Normal)
 }
 
-export type TraversalFn<T> = (routes: T[], fn: IVisitor<T>) => void
+export type TraversalFn<T extends TNode> = (routes: T[], fn: IVisitor<T>) => void
 
 /**
  * Find route context by a specific matcher
@@ -275,24 +276,38 @@ export const resolveRoutePath = (route: TNode | string, options: ResolveRouteOpt
   return path
 }
 
-export const reduceTree = <T extends TNode | TNode[]> (node: T, matcher: IVisitor): T => {
+export const reduceTree = <T extends TNode> (node: T | T[], predicate: IVisitorWithLevel<T>): typeof node => {
   const isList = isArray(node)
-  const list = (isList ? node : [node]) as TNode[]
-  const reduce = (parent: TNode | undefined, nodes: TNode[], root: string, level: number): TNode[] => nodes.reduce((arr, node) => {
-    const {
-      children = [],
-      ...item
-    } = node
-    const path = resolvePath(root, node.path, true)
-    if (matcher(parent, node, path, level)) {
-      if (children && children.length) {
-        const items = reduce(node, children, path, level + 1)
-        if (items.length) item.children = items
+  const list = (isList ? node : [node]) as T[]
+  const reduce = (parent: T | undefined, nodes: T[], root: string, level: number): T[] => nodes.reduce<T[]>((arr, node) => {
+    const copyChildren = (node.children && node.children.slice(0) || []) as T[]
+    const copyNode: T = {
+      ...node,
+      children: copyChildren
+    }
+    const path = resolvePath(root, copyNode.path, true)
+    if (predicate(parent, copyNode, path, level)) {
+      if (copyChildren.length > 0) {
+        copyNode.children = reduce(copyNode, copyChildren, path, level + 1)
       }
-      arr.push(item)
+      if (!copyNode.children?.length) {
+        delete copyNode.children
+      }
+      arr.push(copyNode)
     }
     return arr
-  }, [] as TNode[])
+  }, [])
   const ret = reduce(undefined, list, '/', 0)
-  return (isList ? ret : ret[0]) as T
+  return isList ? ret : ret[0]
+}
+
+type TreeMapIterator<T, TResult> = (node: T, index: number, array: T[]) => TResult
+
+export const flatMapTree = <TResult> (tree: TNode, mapFunc: TreeMapIterator<TNode, TResult>): TResult[] => {
+  const fn = (node: TNode, index: number, array: TNode[]) => {
+    const v = mapFunc(node, index, array)
+    const { children } = node
+    return children ? [v, ...children.flatMap(fn)] : [v]
+  }
+  return fn(tree, 0, [])
 }
