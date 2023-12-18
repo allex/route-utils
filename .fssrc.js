@@ -1,9 +1,9 @@
-// vim: set ft=javascript fdm=marker et ff=unix tw=80 sw=2:
+// vim: set ft=javascript fdm=marker et ff=unix tw=81 sw=2:
 // author: allex_wang <http://iallex.com>
 
 import path from 'path'
 
-import { version, name, author, license, description, dependencies } from './package.json'
+import { version, name, author, license, description } from './package.json'
 
 const banner = (name, short = false) => {
   let s
@@ -33,14 +33,13 @@ const plugins = [
 
 export default {
   destDir: resolve('lib'),
-  dependencies: { ...dependencies },
   entry: [
     {
       input: resolve('src/index.ts'),
       plugins,
       output: [
-        { format: 'es', file: 'route-utils.esm.js', banner: banner(name, true) },
-        { format: 'cjs', file: 'route-utils.js', banner: banner(name) }
+        { format: 'es', file: 'lib/route-utils.esm.js', banner: banner(name, true) },
+        { format: 'cjs', file: 'lib/route-utils.js', banner: banner(name) }
       ]
     }
   ]
