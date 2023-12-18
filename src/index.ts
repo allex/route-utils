@@ -28,27 +28,27 @@ const param = (o: Kv): string => {
   }, '')
 }
 
-export interface TNode<TKey extends string | number = string> {
-  [key: string]: any;
+export interface TNode {
+  [key: string | symbol]: any;
   path?: string;
-  children?: Array<TNode<TKey>>
+  children?: TNode[];
 }
 
-export interface TNodeRef<T extends TNode = TNode> {
-  parent?: T;
+export interface TNodeRef<T> {
+  parent: T | null;
   path: string;
   node: T;
 }
 
-export type IVisitor<T extends TNode = TNode> = (parent: T | undefined, node: T, path: string, level?: number) => TReturn | boolean
-export type IVisitorWithLevel<T extends TNode = TNode> = (parent: T | undefined, node: T, path: string, level: number) => TReturn | boolean
+export type IVisitor<T> = (parent: T | null, node: T, path: string, level?: number) => TReturn | boolean
+export type IVisitorWithLevel<T> = (parent: T | null, node: T, path: string, level: number) => TReturn | boolean
 
-export type EnterVisitor = IVisitor<TNode>
-export type LeaveVisitor = IVisitor<TNode>
+export type EnterVisitor<T> = IVisitor<T>
+export type LeaveVisitor<T> = IVisitor<T>
 
-export interface ITraverseOption {
-  enter?: EnterVisitor;
-  leave?: LeaveVisitor;
+export interface ITraverseOption<T extends TNode> {
+  enter?: EnterVisitor<T>;
+  leave?: LeaveVisitor<T>;
 }
 
 enum TReturn {
@@ -110,14 +110,14 @@ export const matchPath = (path: string, ref: string): EMatch => {
  * @param {TNode|TNode[]} route(s)
  * @param {ITraverseOption|EnterVisitor} visitor
  */
-export const traverse = <T extends TNode>(route: T | T [], visitor: EnterVisitor | ITraverseOption): void => {
-  let enter: EnterVisitor = defaultVisitor
-  let leave: LeaveVisitor = defaultVisitor
+export const traverse = <T extends TNode>(route: T | T [], visitor: EnterVisitor<T> | ITraverseOption<T>): void => {
+  let enter: EnterVisitor<T> = defaultVisitor
+  let leave: LeaveVisitor<T> = defaultVisitor
 
   if (isFunction(visitor)) {
-    enter = visitor as EnterVisitor
+    enter = visitor as EnterVisitor<T>
   } else {
-    const v = visitor as ITraverseOption
+    const v = visitor as ITraverseOption<T>
     enter = v.enter || enter
     leave = v.leave || leave
   }
@@ -151,21 +151,20 @@ export const traverse = <T extends TNode>(route: T | T [], visitor: EnterVisitor
   reduce(null, route as T[], '/')
 }
 
+const createCtx = <T extends TNode>(basePath: string, node: T, parent: T | null): TNodeRef<T> =>
+  ({ parent, node, path: resolvePath(basePath, node.path, true) })
+
 // Performs a bfs on a node and its children
-const bfsTraversal = <T extends TNode> (node: T | T[], matcher: IVisitor): T[] => {
+const bfsTraversal = <T extends TNode> (node: T | T[], matcher: IVisitor<T>): T[] => {
   if (!isArray(node)) {
     // duplicate root
     node = [node]
   }
 
-  const createCtx = (root: string, node: TNode, parent?: TNode): TNodeRef =>
-    ({ parent, node, path: resolvePath(root, node.path, true) })
-
   const nodes: T[] = []
-
   if (node.length) {
     // init queue
-    const queue = node.map((node: T) => createCtx('/', node, node))
+    const queue = node.map((n) => createCtx('/', n, null))
 
     while (queue.length) {
       const item = queue.shift()
@@ -173,15 +172,14 @@ const bfsTraversal = <T extends TNode> (node: T | T[], matcher: IVisitor): T[] =
       const { parent, node, path } = item
       const r = matcher(parent, node, path)
       if (r !== TReturn.Skip) {
-        nodes.push(node as T)
+        nodes.push(node)
       }
-      let children: TNode[] | undefined
       if (isTBreak(r)) {
         break
-      } else if (r !== TReturn.Skip && (children = node.children)) {
-        for (let i = 0; i < children.length; i++) {
-          queue.push(createCtx(path, children[i], node))
-        }
+      } else if (r !== TReturn.Skip && node.children) {
+        node.children.forEach(n => {
+          queue.push(createCtx(path, n as T, node))
+        })
       }
     }
   }
@@ -194,11 +192,11 @@ interface MatcherOptions {
   bfs?: boolean;
 }
 
-const normalizeMatcher = (matcher: IVisitor | string, { prefix }: MatcherOptions = {}): IVisitor => {
+const normalizeMatcher = <T>(matcher: IVisitor<T> | string, { prefix }: MatcherOptions = {}): IVisitor<T> => {
   if (isFunction(matcher)) {
     return prefix
-      ? (parent, node, path) => (matchPath(path, prefix) === EMatch.NE ? TReturn.Skip : normalizeTReturn((matcher as IVisitor)(parent, node, path)))
-      : (parent, node, path) => normalizeTReturn((matcher as IVisitor)(parent, node, path))
+      ? (parent, node, path) => (matchPath(path, prefix) === EMatch.NE ? TReturn.Skip : normalizeTReturn((matcher as IVisitor<T>)(parent, node, path)))
+      : (parent, node, path) => normalizeTReturn((matcher as IVisitor<T>)(parent, node, path))
   }
   return (_parent, _node, path) => ((matcher as string).indexOf(path) !== 0
     ? TReturn.Skip
@@ -207,7 +205,7 @@ const normalizeMatcher = (matcher: IVisitor | string, { prefix }: MatcherOptions
       : TReturn.Normal)
 }
 
-export type TraversalFn<T extends TNode> = (routes: T[], fn: IVisitor<T>) => void
+export type TraversalFn<T> = (items: T[], visitor: IVisitor<T>) => void
 
 /**
  * Find route context by a specific matcher
@@ -216,23 +214,30 @@ export type TraversalFn<T extends TNode> = (routes: T[], fn: IVisitor<T>) => voi
  *
  * @returns {TNodeRef|undefined}
  */
-export const findNodeRef = <T extends TNode> (routes: T[], matcher: IVisitor | string, options: MatcherOptions = {}): TNodeRef<T> | undefined => {
-  if (!isArray(routes)) {
+export const findNodeRef = <T extends TNode> (
+  nodes: T[],
+  matcher: IVisitor<T> | string,
+  options: MatcherOptions = {}
+): TNodeRef<T> | undefined => {
+  if (!isArray(nodes)) {
     throw new TypeError('Invalid node list')
   }
-  let context: TNodeRef<TNode> | undefined
-  const predicate: IVisitor = normalizeMatcher(matcher, options)
-  const traverseFn: TraversalFn<TNode> = options.bfs
-    ? bfsTraversal as TraversalFn<TNode>
+
+  let context: TNodeRef<T> | undefined
+  const predicate: IVisitor<T> = normalizeMatcher(matcher, options)
+  const traverseFn: TraversalFn<T> = options.bfs
+    ? bfsTraversal
     : traverse
-  traverseFn(routes, (parent, node, path) => {
+
+  traverseFn(nodes, (parent, node, path) => {
     const r = predicate(parent, node, path)
     if (isTBreak(r)) {
       context = { parent, node, path }
     }
     return r
   })
-  return context as TNodeRef<T>
+
+  return context
 }
 
 export interface ResolveRouteOptions {
@@ -279,7 +284,7 @@ export const resolveRoutePath = (route: TNode | string, options: ResolveRouteOpt
 export const reduceTree = <T extends TNode> (node: T | T[], predicate: IVisitorWithLevel<T>): typeof node => {
   const isList = isArray(node)
   const list = (isList ? node : [node]) as T[]
-  const reduce = (parent: T | undefined, nodes: T[], root: string, level: number): T[] => nodes.reduce<T[]>((arr, node) => {
+  const reduce = (parent: T | null, nodes: T[], root: string, level: number): T[] => nodes.reduce<T[]>((arr, node) => {
     const copyChildren = (node.children && node.children.slice(0) || []) as T[]
     const copyNode: T = {
       ...node,
@@ -297,7 +302,7 @@ export const reduceTree = <T extends TNode> (node: T | T[], predicate: IVisitorW
     }
     return arr
   }, [])
-  const ret = reduce(undefined, list, '/', 0)
+  const ret = reduce(null, list, '/', 0)
   return isList ? ret : ret[0]
 }
 
