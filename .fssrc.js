@@ -28,7 +28,8 @@ const plugins = [
   'typescript',
   'babel',
   'commonjs',
-  'globals'
+  'globals',
+  ['minimize', { output: { beautify: true } }]
 ]
 
 export default {

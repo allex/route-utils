@@ -115,9 +115,9 @@ export const traverse = <T extends TNode>(route: T | T [], visitor: EnterVisitor
   let leave: LeaveVisitor<T> = defaultVisitor
 
   if (isFunction(visitor)) {
-    enter = visitor as EnterVisitor<T>
+    enter = visitor
   } else {
-    const v = visitor as ITraverseOption<T>
+    const v = visitor
     enter = v.enter || enter
     leave = v.leave || leave
   }
@@ -148,7 +148,7 @@ export const traverse = <T extends TNode>(route: T | T [], visitor: EnterVisitor
     route = [route]
   }
 
-  reduce(null, route as T[], '/')
+  reduce(null, route, '/')
 }
 
 const createCtx = <T extends TNode>(basePath: string, node: T, parent: T | null): TNodeRef<T> =>
@@ -195,10 +195,10 @@ interface MatcherOptions {
 const normalizeMatcher = <T>(matcher: IVisitor<T> | string, { prefix }: MatcherOptions = {}): IVisitor<T> => {
   if (isFunction(matcher)) {
     return prefix
-      ? (parent, node, path) => (matchPath(path, prefix) === EMatch.NE ? TReturn.Skip : normalizeTReturn((matcher as IVisitor<T>)(parent, node, path)))
-      : (parent, node, path) => normalizeTReturn((matcher as IVisitor<T>)(parent, node, path))
+      ? (parent, node, path) => (matchPath(path, prefix) === EMatch.NE ? TReturn.Skip : normalizeTReturn(matcher(parent, node, path)))
+      : (parent, node, path) => normalizeTReturn(matcher(parent, node, path))
   }
-  return (_parent, _node, path) => ((matcher as string).indexOf(path) !== 0
+  return (_parent, _node, path) => ((matcher).indexOf(path) !== 0
     ? TReturn.Skip
     : matcher === path
       ? TReturn.Break
@@ -242,8 +242,8 @@ export const findNodeRef = <T extends TNode> (
 
 export interface ResolveRouteOptions {
   base?: string;
-  params?: Kv,
-  query?: Kv,
+  params?: Kv;
+  query?: Kv;
   append?: boolean;
 }
 
@@ -263,7 +263,7 @@ export const resolveRoutePath = (route: TNode | string, options: ResolveRouteOpt
     append = false
   } = options
 
-  const rawPath = isString(route) ? (route as string) : (route as TNode).path
+  const rawPath = isString(route) ? (route) : (route).path
 
   let path = resolvePath(base, rawPath, !!append)
 
@@ -283,7 +283,7 @@ export const resolveRoutePath = (route: TNode | string, options: ResolveRouteOpt
 
 export const reduceTree = <T extends TNode> (node: T | T[], predicate: IVisitorWithLevel<T>): typeof node => {
   const isList = isArray(node)
-  const list = (isList ? node : [node]) as T[]
+  const list = (isList ? node : [node])
   const reduce = (parent: T | null, nodes: T[], root: string, level: number): T[] => nodes.reduce<T[]>((arr, node) => {
     const copyChildren = (node.children && node.children.slice(0) || []) as T[]
     const copyNode: T = {
@@ -308,11 +308,14 @@ export const reduceTree = <T extends TNode> (node: T | T[], predicate: IVisitorW
 
 type TreeMapIterator<T, TResult> = (node: T, index: number, array: T[]) => TResult
 
-export const flatMapTree = <TResult> (tree: TNode, mapFunc: TreeMapIterator<TNode, TResult>): TResult[] => {
-  const fn = (node: TNode, index: number, array: TNode[]) => {
+export const flatMapTree = <T extends TNode, TResult> (
+  tree: T,
+  mapFunc: TreeMapIterator<T, TResult>
+): TResult[] => {
+  const fn = (node: T, index: number, array: T[]) => {
     const v = mapFunc(node, index, array)
-    const { children } = node
-    return children ? [v, ...children.flatMap(fn)] : [v]
+    const children = node.children as T[]
+    return children ? [v, ...children.flatMap<TResult, null>(fn)] : [v]
   }
   return fn(tree, 0, [])
 }

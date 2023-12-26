@@ -1,6 +1,6 @@
-import { compile } from 'path-to-regexp'
+import { compile, PathFunction } from 'path-to-regexp'
 
-const regexpCompileCache: Kv = Object.create(null)
+const regexpCompileCache: Record<string, PathFunction> = Object.create(null)
 
 export function fillParams (path: string, params: Kv): string {
   params = params || {}
@@ -11,10 +11,11 @@ export function fillParams (path: string, params: Kv): string {
     // Fix #2505 resolving asterisk routes { name: 'not-found', params: { pathMatch: '/not-found' }}
     if (params.pathMatch) params[0] = params.pathMatch
 
-    return filler(params, { pretty: true })
+    return filler(params)
   } catch (e) {
     if (process.env.NODE_ENV !== 'production') {
-      console.warn(false, `missing param for ${path}: ${(e instanceof Error ? e.message : e)}`)
+      // eslint-disable-next-line no-console
+      console.warn(`missing param for ${path}: ${(e instanceof Error ? e.message : (e as string))}`)
     }
     return ''
   } finally {
