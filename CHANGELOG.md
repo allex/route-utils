@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+### [2.0.6](https://github.com/allex/route-utils/compare/2.0.5...2.0.6) (2023-12-27)
+
+
+### Bug Fixes
+
+* fulfill docs with api definition and examples ([f063ffa](https://github.com/allex/route-utils/commit/f063ffa94e2e8efbf43310536d161a854a828684))
+* use eslint instead and fix lint issues ([2e14644](https://github.com/allex/route-utils/commit/2e146440ded11cc31cd3091f03292d2699e8be08))
+
 ### [2.0.5](https://github.com/allex/route-utils/compare/2.0.4...2.0.5) (2023-12-18)
 
 
